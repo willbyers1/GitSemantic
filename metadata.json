@@ -1,0 +1,5 @@
+{
+  "name": "GitSemantic",
+  "description": "A high-performance commit message analyzer that ensures Conventional Commits compliance using Gemini AI.",
+  "requestFramePermissions": []
+}
