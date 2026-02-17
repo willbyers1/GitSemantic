@@ -4,6 +4,20 @@ Commit with Confidence. An AI-powered semantic analyzer that audits your git com
 📸 Screenshots
 Will be added soon...
 
+## AI Integration Note
+
+This project demonstrates Gemini 1.5 integration inside Google AI Studio.
+Due to current public API availability and quota limitations, the live preview
+may not execute real API calls outside the Studio environment.
+
+The focus of this project is:
+- UX flow
+- BYOK architecture
+- AI-assisted DevEx tooling design
+
+The codebase is structured to support real API connectivity when available.
+
+
 📖 Overview
 GitSemantic is a developer-experience (DevEx) tool designed to maintain repository hygiene. It acts as a pre-commit check in your browser. By leveraging the Google Gemini 1.5 Flash model, it semantically understands your commit intent and verifies if it aligns with the Conventional Commits specification (feat, fix, chore, etc.).
 
