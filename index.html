@@ -1,0 +1,281 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitSemantic | Commit Auditor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .github-border { border-color: #30363d; }
+        .github-bg-dark { background-color: #0d1117; }
+        .github-bg-secondary { background-color: #161b22; }
+        .github-green { color: #3fb950; border-color: #3fb950; }
+        .github-red { color: #f85149; border-color: #f85149; }
+        .btn-primary { background-color: #238636; color: #ffffff; }
+        .btn-primary:hover { background-color: #2ea043; }
+        .btn-secondary { background-color: #21262d; border: 1px solid #30363d; }
+        .btn-secondary:hover { background-color: #30363d; }
+        
+        #app-overlay {
+            backdrop-filter: blur(8px);
+            z-index: 50;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade { animation: fadeIn 0.3s ease-out forwards; }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            background: #161b22;
+            border: 1px solid #30363d;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            z-index: 100;
+            display: none;
+        }
+    </style>
+<link rel="stylesheet" href="/index.css">
+  <script type="module" crossorigin src="./assets/index-B5Qt9EMX.js"></script>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- API Key Modal -->
+    <div id="key-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-[60]">
+        <div class="github-bg-secondary p-8 rounded-lg border github-border w-full max-w-md mx-4">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                Gemini API Key Required
+            </h2>
+            <p class="text-sm text-gray-400 mb-6">Enter your Gemini API key to unlock the auditor. Your key is stored locally in this session only.</p>
+            <input type="password" id="api-key-input" placeholder="AIza..." class="w-full github-bg-dark border github-border rounded p-3 mb-4 focus:outline-none focus:ring-1 focus:ring-green-500 text-white">
+            <button onclick="saveApiKey()" class="w-full btn-primary font-bold py-3 rounded transition-all">Unlock Application</button>
+            <p class="mt-4 text-xs text-center text-gray-500">
+                Don't have a key? <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-400 hover:underline">Get one here</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app-container" class="flex-grow blur-sm transition-all duration-500">
+        <header class="border-b github-border py-4 px-6 github-bg-secondary flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <svg class="w-8 h-8 github-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+                <h1 class="text-xl font-bold tracking-tight">GitSemantic <span class="text-xs font-normal text-gray-500 ml-2">v1.0.0</span></h1>
+            </div>
+            <button onclick="resetKey()" class="text-xs btn-secondary px-3 py-2 rounded text-gray-400 hover:text-white transition-colors">Reset Key</button>
+        </header>
+
+        <main class="max-w-4xl mx-auto px-6 py-12 w-full">
+            <div class="github-bg-secondary border github-border rounded-xl p-6 shadow-2xl">
+                <label class="block text-sm font-medium mb-3 text-gray-400">Draft Commit Message</label>
+                <textarea id="commit-input" rows="4" placeholder="e.g. fixed login bug on mobile screens" class="w-full github-bg-dark border github-border rounded-lg p-4 text-lg focus:outline-none focus:ring-2 focus:ring-green-900 focus:border-green-600 transition-all mb-6 resize-none"></textarea>
+                
+                <button id="audit-btn" onclick="auditCommit()" class="w-full btn-primary py-4 rounded-lg font-bold text-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                    <span id="btn-text">Audit Commit</span>
+                    <svg id="loading-spinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="result-area" class="mt-8 hidden animate-fade">
+                <div id="result-card" class="github-bg-secondary border rounded-xl overflow-hidden shadow-2xl">
+                    <div id="status-bar" class="px-6 py-4 border-b flex items-center justify-between">
+                        <span id="status-badge" class="px-3 py-1 rounded-full text-xs font-bold uppercase border"></span>
+                        <span class="text-xs text-gray-500 uppercase tracking-widest font-bold">Semantic Analysis</span>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-6">
+                            <h3 class="text-sm font-bold text-gray-500 uppercase mb-2">Findings</h3>
+                            <p id="reason-text" class="text-lg"></p>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-500 uppercase mb-2">Use this instead</h3>
+                            <div onclick="copyFixed()" class="group relative cursor-pointer github-bg-dark border github-border rounded-lg p-4 hover:border-blue-500 transition-all">
+                                <code id="fixed-text" class="text-green-400 break-all"></code>
+                                <div class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                                </div>
+                            </div>
+                            <p class="mt-2 text-xs text-gray-500 italic">Click the box to copy to clipboard</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="py-12 px-6 border-t github-border text-center text-gray-600 text-sm">
+            <p>GitSemantic is a DevEx tool for cleaner version control.</p>
+            <p class="mt-1 font-bold">Developed by Mert Batu BULBUL</p>
+        </footer>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const KEY_STORAGE = 'GEMINI_API_KEY';
+        
+        // Initial setup
+        window.addEventListener('DOMContentLoaded', () => {
+            const key = sessionStorage.getItem(KEY_STORAGE);
+            if (key && key.startsWith('AIza')) {
+                unlockApp();
+            } else {
+                sessionStorage.removeItem(KEY_STORAGE);
+                document.getElementById('key-modal').classList.remove('hidden');
+            }
+        });
+
+        function showToast(msg, duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, duration);
+        }
+
+        function saveApiKey() {
+            const keyInput = document.getElementById('api-key-input').value.trim();
+            if (!keyInput.startsWith('AIza')) {
+                showToast('Invalid Gemini API Key format.');
+                return;
+            }
+            sessionStorage.setItem(KEY_STORAGE, keyInput);
+            unlockApp();
+        }
+
+        function unlockApp() {
+            document.getElementById('key-modal').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('blur-sm');
+        }
+
+        function resetKey() {
+            sessionStorage.removeItem(KEY_STORAGE);
+            document.getElementById('app-container').classList.add('blur-sm');
+            document.getElementById('key-modal').classList.remove('hidden');
+            document.getElementById('api-key-input').value = '';
+            document.getElementById('result-area').classList.add('hidden');
+        }
+
+        async function auditCommit() {
+            const input = document.getElementById('commit-input').value.trim();
+            const btn = document.getElementById('audit-btn');
+            const btnText = document.getElementById('btn-text');
+            const spinner = document.getElementById('loading-spinner');
+            const resultArea = document.getElementById('result-area');
+            const apiKey = sessionStorage.getItem(KEY_STORAGE);
+
+            if (!input) {
+                showToast('Please enter a draft commit message.');
+                return;
+            }
+
+            // UI Loading State
+            btn.disabled = true;
+            btnText.textContent = 'Auditing...';
+            spinner.classList.remove('hidden');
+            resultArea.classList.add('hidden');
+
+            const systemPrompt = `Act as a Git expert. Validate this commit message against Conventional Commits.
+Allowed types: feat, fix, docs, style, refactor, test, chore.
+Return ONLY raw JSON (no markdown, no code fences) with:
+{ "isValid": boolean, "reason": string, "fixedVersion": string }.
+Reason must be short. fixedVersion must be a single commit message line.`;
+
+            const fullPrompt = `${systemPrompt}\n\nCommit message: "${input}"`;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error?.message || 'API request failed');
+                }
+
+                const data = await response.json();
+                let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                
+                // Clean markdown if present
+                rawText = rawText.replace(/```json|```/g, '').trim();
+                
+                let result;
+                try {
+                    result = JSON.parse(rawText);
+                } catch (e) {
+                    console.error('JSON Parse Error:', rawText);
+                    showToast('Model returned invalid JSON');
+                    return;
+                }
+
+                displayResult(result);
+
+            } catch (error) {
+                console.error(error);
+                showToast(error.message);
+                if (error.message.includes('key')) resetKey();
+            } finally {
+                btn.disabled = false;
+                btnText.textContent = 'Audit Commit';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function displayResult(res) {
+            const resultArea = document.getElementById('result-area');
+            const statusBar = document.getElementById('status-bar');
+            const statusBadge = document.getElementById('status-badge');
+            const reasonText = document.getElementById('reason-text');
+            const fixedText = document.getElementById('fixed-text');
+            const resultCard = document.getElementById('result-card');
+
+            resultArea.classList.remove('hidden');
+            reasonText.textContent = res.reason;
+            fixedText.textContent = res.fixedVersion;
+
+            if (res.isValid) {
+                statusBadge.textContent = 'VALID';
+                statusBadge.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase border github-green bg-green-950/30';
+                statusBar.className = 'px-6 py-4 border-b github-border flex items-center justify-between bg-green-950/10';
+                resultCard.classList.replace('border-red-500', 'github-border');
+            } else {
+                statusBadge.textContent = 'INVALID';
+                statusBadge.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase border github-red bg-red-950/30';
+                statusBar.className = 'px-6 py-4 border-b github-border flex items-center justify-between bg-red-950/10';
+                resultCard.classList.add('border-red-500');
+            }
+        }
+
+        function copyFixed() {
+            const text = document.getElementById('fixed-text').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Fixed message copied to clipboard!');
+            });
+        }
+    </script>
+</body>
+</html>
